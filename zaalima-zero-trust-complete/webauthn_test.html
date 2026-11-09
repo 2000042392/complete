@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zaalima Passkey Demo</title>
+<style>
+body{font:16px system-ui;max-width:720px;margin:40px auto;padding:0 16px;background:#f5f7fb;color:#182338}
+section{background:white;padding:22px;border-radius:12px;margin:16px 0}
+input{display:block;width:100%;box-sizing:border-box;padding:11px;margin:8px 0 14px}
+button{padding:10px 16px;margin:5px 5px 5px 0;cursor:pointer}
+pre{white-space:pre-wrap;overflow-wrap:anywhere}
+</style></head><body>
+<h1>Zaalima WebAuthn / Passkey Test</h1>
+<p>Open http://localhost:8000/webauthn/demo after starting the API. The page is served by FastAPI so its origin matches the local WebAuthn configuration.</p>
+<section><h2>Register a passkey</h2>
+<label>Existing account access token</label><input id="token" placeholder="Paste access token from /login">
+<button id="register">Register passkey</button></section>
+<section><h2>Passwordless passkey login</h2>
+<label>Username</label><input id="username" placeholder="Your registered username">
+<button id="login">Login with passkey</button></section>
+<section><h2>Result</h2><pre id="result">Ready.</pre></section>
+<script>
+const API=window.location.origin, out=document.getElementById("result");
+const dec=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return Uint8Array.from(atob(s),c=>c.charCodeAt(0));};
+const enc=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+async function call(path,{token,body}={}){const h={"Content-Type":"application/json"};if(token)h.Authorization="Bearer "+token;
+ const r=await fetch(API+path,{method:"POST",headers:h,body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw Error(JSON.stringify(d));return d;}
+function serialize(c,registration){const response={clientDataJSON:enc(c.response.clientDataJSON)};
+ if(registration){response.attestationObject=enc(c.response.attestationObject);response.transports=c.response.getTransports?.()||[];}
+ else{response.authenticatorData=enc(c.response.authenticatorData);response.signature=enc(c.response.signature);response.userHandle=c.response.userHandle?enc(c.response.userHandle):null;}
+ return {id:c.id,rawId:enc(c.rawId),type:c.type,response,clientExtensionResults:c.getClientExtensionResults()};}
+document.getElementById("register").onclick=async()=>{try{out.textContent="Starting registration…";
+ const token=document.getElementById("token").value.trim();if(!token)throw Error("Paste a login access token first.");
+ const opts=await call("/webauthn/register/start",{token});opts.challenge=dec(opts.challenge);opts.user.id=dec(opts.user.id);
+ if(opts.excludeCredentials)opts.excludeCredentials=opts.excludeCredentials.map(x=>({...x,id:dec(x.id)}));
+ const credential=await navigator.credentials.create({publicKey:opts});
+ const result=await call("/webauthn/register/finish",{token,body:serialize(credential,true)});out.textContent=JSON.stringify(result,null,2);
+ }catch(e){out.textContent="Registration failed: "+e.message;}};
+document.getElementById("login").onclick=async()=>{try{out.textContent="Requesting passkey…";
+ const username=document.getElementById("username").value.trim();if(!username)throw Error("Enter your username.");
+ const opts=await call("/webauthn/login/start",{body:{username}});opts.challenge=dec(opts.challenge);
+ if(opts.allowCredentials)opts.allowCredentials=opts.allowCredentials.map(x=>({...x,id:dec(x.id)}));
+ const credential=await navigator.credentials.get({publicKey:opts});
+ const result=await call("/webauthn/login/finish",{body:{username,credential:serialize(credential,false)}});
+ out.textContent=JSON.stringify(result,null,2);
+ }catch(e){out.textContent="Passkey login failed: "+e.message;}};
+</script></body></html>

@@ -1,0 +1,10 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/*.db
+data/*.json
+data/keys/
+!data/.gitkeep
+traefik/acme.json

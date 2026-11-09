@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Zaalima Security Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background: #f4f6f9;
+            color: #172033;
+        }
+        h1, h2 { color: #163a70; }
+        .panel {
+            background: white;
+            padding: 20px;
+            margin-bottom: 24px;
+            border-radius: 10px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+            overflow-wrap: anywhere;
+        }
+        th { background: #e7edf7; }
+    </style>
+</head>
+<body>
+    <h1>Zaalima Zero Trust Dashboard</h1>
+
+    <section class="panel">
+        <h2>Registered users</h2>
+        <p>Total users: {{ users|length }}</p>
+        <table>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>DID</th>
+                <th>Role</th>
+            </tr>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.did }}</td>
+                <td>{{ user.role }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </section>
+
+    <section class="panel">
+        <h2>Recent security events</h2>
+        <table>
+            <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>User</th>
+                <th>Details</th>
+            </tr>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.created_at }}</td>
+                <td>{{ log.event }}</td>
+                <td>{{ log.username or "-" }}</td>
+                <td>{{ log.details }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </section>
+</body>
+</html>
